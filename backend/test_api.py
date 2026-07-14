@@ -31,6 +31,13 @@ def test_endpoint(payload, name):
             print("\nDimension Scores:")
             for dim, results in res_json.get("dimensions", {}).items():
                 print(f" - {dim.capitalize()}: {results.get('score')}/5 | Reasoning: {results.get('reasoning')}")
+                if dim == "accuracy" and results.get("matched_facts") is not None:
+                    print(f"   * Matched Facts: {results.get('matched_facts')}")
+                    print(f"   * Mismatched Facts: {results.get('mismatched_facts')}")
+                if dim == "hallucination" and results.get("claims_analysis") is not None:
+                    print(f"   * Claims Grounding Audits:")
+                    for claim in results.get("claims_analysis"):
+                        print(f"     - [{claim.get('status')}] {claim.get('claim')} ({claim.get('explanation')})")
                 
             retrieved = res_json.get("retrieved_contexts")
             if retrieved:
