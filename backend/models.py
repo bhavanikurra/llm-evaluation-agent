@@ -17,6 +17,10 @@ class RetrievedContext(BaseModel):
 class DimensionResult(BaseModel):
     score: int
     reasoning: str
+    matched_facts: Optional[List[str]] = None
+    mismatched_facts: Optional[List[str]] = None
+    claims_analysis: Optional[List[Dict[str, str]]] = None
+    flagged_statements: Optional[List[str]] = None
 
 class EvaluationResponse(BaseModel):
     status: str

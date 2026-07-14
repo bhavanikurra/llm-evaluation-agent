@@ -62,6 +62,9 @@ const scoreCompleteness = document.getElementById("score-completeness");
 const barCompleteness = document.getElementById("bar-completeness");
 const reasonCompleteness = document.getElementById("reason-completeness");
 
+const accuracyAudit = document.getElementById("accuracy-audit");
+const hallucinationAudit = document.getElementById("hallucination-audit");
+
 const ragContextSection = document.getElementById("rag-context-section");
 const ragContextList = document.getElementById("rag-context-list");
 
@@ -135,6 +138,8 @@ function resetScorecardView() {
     resultsLoading.classList.add("hidden");
     resultsActive.classList.add("hidden");
     evaluatorTag.classList.add("hidden");
+    accuracyAudit.classList.add("hidden");
+    hallucinationAudit.classList.add("hidden");
 }
 
 // Form Submission & Multi-Agent Orchestration UI Flow
@@ -249,10 +254,58 @@ function renderScorecard(data) {
     barAccuracy.style.width = `${(dims.accuracy.score / 5) * 100}%`;
     reasonAccuracy.textContent = dims.accuracy.reasoning;
     
-    // Hallucination
+    // Accuracy Audit items
+    accuracyAudit.innerHTML = "";
+    const matchedFacts = dims.accuracy.matched_facts || [];
+    const mismatchedFacts = dims.accuracy.mismatched_facts || [];
+    
+    if (matchedFacts.length > 0 || mismatchedFacts.length > 0) {
+        accuracyAudit.classList.remove("hidden");
+        
+        matchedFacts.forEach(fact => {
+            const item = document.createElement("div");
+            item.className = "audit-item matched";
+            item.innerHTML = `<i class="fa-solid fa-circle-check"></i> <span>${fact}</span>`;
+            accuracyAudit.appendChild(item);
+        });
+        
+        mismatchedFacts.forEach(fact => {
+            const item = document.createElement("div");
+            item.className = "audit-item mismatched";
+            item.innerHTML = `<i class="fa-solid fa-circle-xmark"></i> <span>${fact}</span>`;
+            accuracyAudit.appendChild(item);
+        });
+    } else {
+        accuracyAudit.classList.add("hidden");
+    }
+    
+    // Hallucination (Groundedness)
     scoreHallucination.textContent = `${dims.hallucination.score.toFixed(1)}/5`;
     barHallucination.style.width = `${(dims.hallucination.score / 5) * 100}%`;
     reasonHallucination.textContent = dims.hallucination.reasoning;
+    
+    // Hallucination Audit items
+    hallucinationAudit.innerHTML = "";
+    const claimsAnalysis = dims.hallucination.claims_analysis || [];
+    
+    if (claimsAnalysis.length > 0) {
+        hallucinationAudit.classList.remove("hidden");
+        
+        claimsAnalysis.forEach(item => {
+            const claimItem = document.createElement("div");
+            const isGrounded = item.status === "Grounded";
+            claimItem.className = `audit-item-claim ${isGrounded ? 'grounded' : 'hallucinated'}`;
+            
+            const badge = `<span class="audit-badge ${isGrounded ? 'grounded' : 'hallucinated'}"><i class="fa-solid ${isGrounded ? 'fa-circle-check' : 'fa-triangle-exclamation'}"></i> ${item.status}</span>`;
+            const text = `<span class="claim-text">${item.claim}</span>`;
+            const explanation = `<span class="claim-explanation">${item.explanation}</span>`;
+            
+            claimItem.innerHTML = `${badge} ${text} ${explanation}`;
+            hallucinationAudit.appendChild(claimItem);
+        });
+    } else {
+        hallucinationAudit.classList.add("hidden");
+    }
     
     // Completeness
     scoreCompleteness.textContent = `${dims.completeness.score.toFixed(1)}/5`;
@@ -315,6 +368,11 @@ function runClientSideMockEvaluation(req) {
     let scoreAcc = 3;
     let reasonAcc = "No reference document was provided to anchor accuracy scoring. Estimated factual rate is neutral.";
     
+    // Assertion splitting
+    const sentences = req.ai_response.split(/(?<=[.!?])\s+/).filter(s => s.trim().length > 3);
+    const matched_facts = [];
+    const mismatched_facts = [];
+    
     if (ref.trim().length > 0) {
         const matches = rWords.filter(w => refWords.includes(w) && w.length > 3);
         const matchRatio = matches.length / Math.max(rWords.filter(w => w.length > 3).length, 1);
@@ -328,11 +386,26 @@ function runClientSideMockEvaluation(req) {
             scoreAcc = 2;
             reasonAcc = "Low accuracy. Several key statements contain discrepancies or fail to match reference truth.";
         }
+        
+        sentences.forEach(s => {
+            const sWords = s.toLowerCase().split(/\s+/).filter(w => w.length > 3);
+            const common = sWords.filter(w => refWords.includes(w));
+            if (common.length > 0 || scoreAcc >= 4) {
+                matched_facts.push(s);
+            } else {
+                mismatched_facts.push(s);
+            }
+        });
+    } else {
+        mismatched_facts.push(...sentences);
     }
     
     // 3. Hallucination Score (Groundedness)
     let scoreHal = 3;
     let reasonHal = "No grounding context provided. Unable to establish proof of truth.";
+    
+    const claims_analysis = [];
+    const flagged_statements = [];
     
     if (ref.trim().length > 0) {
         const stopwords = ["the", "this", "that", "with", "from", "shall", "will", "have", "would", "about"];
@@ -349,6 +422,33 @@ function runClientSideMockEvaluation(req) {
             scoreHal = 2;
             reasonHal = `Potential hallucination. The response references details (${extraClaims.slice(0, 3).join(", ")}) not present in the context.`;
         }
+        
+        sentences.forEach(s => {
+            const sWords = s.toLowerCase().split(/\s+/).filter(w => w.length > 3 && !stopwords.includes(w));
+            const common = sWords.filter(w => refWords.includes(w));
+            const isGrounded = common.length > 0 || scoreHal >= 4;
+            
+            claims_analysis.push({
+                claim: s,
+                status: isGrounded ? "Grounded" : "Hallucinated",
+                explanation: isGrounded 
+                    ? "Grounded: Assertions match context keywords." 
+                    : "Hallucinated: Claim not supported by the reference context."
+            });
+            
+            if (!isGrounded) {
+                flagged_statements.push(s);
+            }
+        });
+    } else {
+        sentences.forEach(s => {
+            claims_analysis.push({
+                claim: s,
+                status: "Hallucinated",
+                explanation: "No reference or source document provided to ground assertions."
+            });
+            flagged_statements.push(s);
+        });
     }
     
     // 4. Completeness Score
@@ -399,7 +499,6 @@ function runClientSideMockEvaluation(req) {
                 score: 0.7612
             }
         ].filter(x => {
-            // Match keywords of question to mock the RAG
             const q = req.question.toLowerCase();
             if (q.includes("toad") && x.source_dataset === "truthful_qa") return true;
             if (q.includes("space") && x.source_dataset === "squad") return true;
@@ -414,8 +513,18 @@ function runClientSideMockEvaluation(req) {
         summary: summary,
         dimensions: {
             relevance: { score: scoreRel, reasoning: reasonRel },
-            accuracy: { score: scoreAcc, reasoning: reasonAcc },
-            hallucination: { score: scoreHal, reasoning: reasonHal },
+            accuracy: { 
+                score: scoreAcc, 
+                reasoning: reasonAcc,
+                matched_facts: matched_facts,
+                mismatched_facts: mismatched_facts
+            },
+            hallucination: { 
+                score: scoreHal, 
+                reasoning: reasonHal,
+                claims_analysis: claims_analysis,
+                flagged_statements: flagged_statements
+            },
             completeness: { score: scoreComp, reasoning: reasonComp }
         },
         evaluator_type: "Local Heuristic Orchestration (Client Simulation)",

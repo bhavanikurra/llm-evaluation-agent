@@ -823,3 +823,119 @@ input:checked + .slider:before {
         text-align: center;
     }
 }
+
+/* Audits & Claim Analysis Styling */
+.dim-audit-box {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 180px;
+    overflow-y: auto;
+}
+
+/* Custom Scrollbar for Audit Box */
+.dim-audit-box::-webkit-scrollbar {
+    width: 4px;
+}
+.dim-audit-box::-webkit-scrollbar-track {
+    background: transparent;
+}
+.dim-audit-box::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+}
+
+.audit-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 0.8rem;
+    padding: 8px 12px;
+    border-radius: 8px;
+    line-height: 1.4;
+}
+
+.audit-item.matched {
+    background: rgba(16, 185, 129, 0.06);
+    border: 1px solid rgba(16, 185, 129, 0.15);
+    color: #a7f3d0;
+}
+
+.audit-item.matched i {
+    color: var(--color-excellent);
+    margin-top: 2px;
+}
+
+.audit-item.mismatched {
+    background: rgba(239, 68, 68, 0.06);
+    border: 1px solid rgba(239, 68, 68, 0.15);
+    color: #fca5a5;
+}
+
+.audit-item.mismatched i {
+    color: var(--color-fail);
+    margin-top: 2px;
+}
+
+.audit-item-claim {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    line-height: 1.4;
+    border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.audit-item-claim.grounded {
+    background: rgba(16, 185, 129, 0.04);
+    border-color: rgba(16, 185, 129, 0.1);
+}
+
+.audit-item-claim.hallucinated {
+    background: rgba(239, 68, 68, 0.04);
+    border-color: rgba(239, 68, 68, 0.1);
+}
+
+.audit-badge {
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    padding: 2px 6px;
+    border-radius: 4px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    width: fit-content;
+    letter-spacing: 0.5px;
+}
+
+.audit-badge.grounded {
+    background: rgba(16, 185, 129, 0.15);
+    color: #34d399;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.audit-badge.hallucinated {
+    background: rgba(239, 68, 68, 0.15);
+    color: #fca5a5;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.claim-text {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.claim-explanation {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    border-left: 2px solid rgba(255, 255, 255, 0.1);
+    padding-left: 8px;
+    margin-top: 2px;
+}
+
