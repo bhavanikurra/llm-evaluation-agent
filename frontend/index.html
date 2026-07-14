@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-Agent LLM Evaluation Harness</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome for Premium Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="stars-bg"></div>
+    <div class="glow-orb orb-1"></div>
+    <div class="glow-orb orb-2"></div>
+
+    <div class="app-container">
+        <!-- Header -->
+        <header class="main-header glass">
+            <div class="brand">
+                <i class="fa-solid fa-microchip-ai logo-icon"></i>
+                <div class="brand-text">
+                    <h1>AETHER</h1>
+                    <span>Multi-Agent RAG Evaluation</span>
+                </div>
+            </div>
+            <div class="header-status">
+                <div id="api-status" class="status-indicator offline">
+                    <span class="dot"></span>
+                    <span class="label">Connecting...</span>
+                </div>
+                <div id="db-stats" class="db-stats-badge glass">
+                    <i class="fa-solid fa-database"></i> KB: <span id="squad-count">0</span> SQuAD | <span id="tqa-count">0</span> TQA
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Layout -->
+        <main class="main-content">
+            <!-- Left Panel: Input Module -->
+            <section class="panel-input glass">
+                <div class="panel-header">
+                    <h2><i class="fa-solid fa-pen-to-square"></i> Evaluation Input</h2>
+                    <div class="quick-presets">
+                        <button id="btn-preset-squad" class="btn-preset small-glass" title="Load a SQuAD sample">
+                            <i class="fa-solid fa-graduation-cap"></i> SQuAD Sample
+                        </button>
+                        <button id="btn-preset-tqa" class="btn-preset small-glass" title="Load a TruthfulQA sample">
+                            <i class="fa-solid fa-scale-balanced"></i> TruthfulQA Sample
+                        </button>
+                    </div>
+                </div>
+
+                <form id="evaluation-form" class="form-layout">
+                    <div class="input-group">
+                        <label for="input-question">User Query / Question <span class="required">*</span></label>
+                        <textarea id="input-question" required placeholder="Enter the query that was sent to the AI model..."></textarea>
+                    </div>
+
+                    <div class="input-group">
+                        <label for="input-response">AI-Generated Response <span class="required">*</span></label>
+                        <textarea id="input-response" required placeholder="Paste the AI model's response to evaluate..."></textarea>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="input-group half">
+                            <label for="input-reference">Reference Ground Truth <span class="optional">(Optional)</span></label>
+                            <input type="text" id="input-reference" placeholder="Ideal correct answer...">
+                        </div>
+                        <div class="input-group half toggle-container">
+                            <label>RAG Augmentation</label>
+                            <label class="switch">
+                                <input type="checkbox" id="toggle-rag" checked>
+                                <span class="slider round"></span>
+                            </label>
+                            <span class="toggle-label">Search Knowledge Base</span>
+                        </div>
+                    </div>
+
+                    <div class="input-group">
+                        <label for="input-source">Custom Source Document / Context <span class="optional">(Optional)</span></label>
+                        <textarea id="input-source" placeholder="Paste custom reference document text or context directly here..."></textarea>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" id="btn-clear" class="btn-secondary">
+                            <i class="fa-solid fa-trash-can"></i> Clear
+                        </button>
+                        <button type="submit" id="btn-submit" class="btn-primary">
+                            <span>Evaluate Response</span> <i class="fa-solid fa-arrow-right"></i>
+                        </button>
+                    </div>
+                </form>
+            </section>
+
+            <!-- Right Panel: Scorecard & Analytics -->
+            <section class="panel-results glass">
+                <div class="panel-header">
+                    <h2><i class="fa-solid fa-chart-pie"></i> Evaluation Scorecard</h2>
+                    <span id="evaluator-tag" class="evaluator-badge hidden">Mock Engine</span>
+                </div>
+
+                <!-- Empty State -->
+                <div id="results-empty" class="empty-state">
+                    <i class="fa-solid fa-magnifying-glass-chart empty-icon"></i>
+                    <h3>Awaiting Evaluation</h3>
+                    <p>Submit a question and AI response to trigger the multi-agent judging pipeline and inspect performance.</p>
+                </div>
+
+                <!-- Loading State -->
+                <div id="results-loading" class="loading-state hidden">
+                    <div class="scanner-line"></div>
+                    <div class="spinner">
+                        <div class="double-bounce1"></div>
+                        <div class="double-bounce2"></div>
+                    </div>
+                    <h3>Orchestrating Judges</h3>
+                    <p id="loading-status-text">Analyzing relevance & factual accuracy...</p>
+                </div>
+
+                <!-- Active Scorecard Results -->
+                <div id="results-active" class="results-layout hidden">
+                    <!-- Verdict & Summary -->
+                    <div class="verdict-card glass">
+                        <div class="verdict-score-wrapper">
+                            <div class="circular-progress" id="verdict-progress">
+                                <span class="progress-value" id="overall-score-display">4.2</span>
+                            </div>
+                            <div class="verdict-label-group">
+                                <span class="sub">Verdict</span>
+                                <span class="main-verdict" id="verdict-text">PASS</span>
+                            </div>
+                        </div>
+                        <div class="verdict-summary">
+                            <h4>Executive Summary</h4>
+                            <p id="verdict-summary-text">...</p>
+                        </div>
+                    </div>
+
+                    <!-- Individual Agent Ratings -->
+                    <h3>Judging Dimensions</h3>
+                    <div class="dimensions-grid">
+                        <!-- Relevance -->
+                        <div class="dimension-card glass">
+                            <div class="dim-header">
+                                <span class="dim-title"><i class="fa-solid fa-bullseye icon-relevance"></i> Relevance</span>
+                                <span class="dim-score" id="score-relevance">5.0/5</span>
+                            </div>
+                            <div class="progress-bar-container">
+                                <div class="progress-bar bar-relevance" id="bar-relevance" style="width: 0%"></div>
+                            </div>
+                            <p class="dim-reason" id="reason-relevance">...</p>
+                        </div>
+
+                        <!-- Accuracy -->
+                        <div class="dimension-card glass">
+                            <div class="dim-header">
+                                <span class="dim-title"><i class="fa-solid fa-circle-check icon-accuracy"></i> Accuracy</span>
+                                <span class="dim-score" id="score-accuracy">4.0/5</span>
+                            </div>
+                            <div class="progress-bar-container">
+                                <div class="progress-bar bar-accuracy" id="bar-accuracy" style="width: 0%"></div>
+                            </div>
+                            <p class="dim-reason" id="reason-accuracy">...</p>
+                        </div>
+
+                        <!-- Hallucination -->
+                        <div class="dimension-card glass">
+                            <div class="dim-header">
+                                <span class="dim-title"><i class="fa-solid fa-triangle-exclamation icon-hallucination"></i> Groundedness</span>
+                                <span class="dim-score" id="score-hallucination">5.0/5</span>
+                            </div>
+                            <div class="progress-bar-container">
+                                <div class="progress-bar bar-hallucination" id="bar-hallucination" style="width: 0%"></div>
+                            </div>
+                            <p class="dim-reason" id="reason-hallucination">...</p>
+                        </div>
+
+                        <!-- Completeness -->
+                        <div class="dimension-card glass">
+                            <div class="dim-header">
+                                <span class="dim-title"><i class="fa-solid fa-list-check icon-completeness"></i> Completeness</span>
+                                <span class="dim-score" id="score-completeness">3.0/5</span>
+                            </div>
+                            <div class="progress-bar-container">
+                                <div class="progress-bar bar-completeness" id="bar-completeness" style="width: 0%"></div>
+                            </div>
+                            <p class="dim-reason" id="reason-completeness">...</p>
+                        </div>
+                    </div>
+
+                    <!-- RAG Evidence Context -->
+                    <div id="rag-context-section" class="rag-evidence glass hidden">
+                        <h4><i class="fa-solid fa-brain"></i> Retrieved Grounding Context (RAG)</h4>
+                        <div id="rag-context-list" class="evidence-list">
+                            <!-- Injected dynamically -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Footer -->
+        <footer class="app-footer">
+            <p>Milestone 1 — Evaluation Input Module & Reference Knowledge Base</p>
+            <a href="https://github.com/bhava-intern/rag-eval-agents" target="_blank" class="repo-link">
+                <i class="fa-brands fa-github"></i> github.com/bhava-intern/rag-eval-agents
+            </a>
+        </footer>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
