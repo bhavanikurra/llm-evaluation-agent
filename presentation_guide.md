@@ -47,6 +47,20 @@ This document serves as your slide structure, talk track, and demonstration scri
     *   **Dual Mode Evaluation**: Configured with Gemini API integration (`google-genai`), falling back to a deterministic semantic heuristic algorithm if the API key is not in the environment.
     *   **Modern SPA Design**: Modern typography (Outfit/Inter), glowing animations, dark-theme layout, and preset buttons for SQuAD and TruthfulQA.
 
+### Slide 6: Milestone 2 — Factual Auditing & Claim Grounding
+*   **Slide Title**: Precision & Transparency
+*   **Key Talking Points**:
+    *   **Sentence-level fact matching**: Split responses to match facts against references, marking them as matched or mismatched.
+    *   **Claim-level grounding**: Hallucination Agent extracts distinct assertions and checks if each is grounded in context or represents a hallucinated statement.
+    *   **Transparent UI**: Displays color-coded audit panels detailing exactly which claims passed and which failed.
+
+### Slide 7: Milestone 2 — Benchmarking & Scoring Consistency
+*   **Slide Title**: Consistency Rate: 100.0%
+*   **Key Talking Points**:
+    *   Designed a test suite with 18 distinct evaluation scenarios from SQuAD and TruthfulQA.
+    *   Verified rank consistency: Correct Answer $\ge$ Partial Answer $\ge$ Hallucinated Answer.
+    *   **Benchmark findings**: Evaluator achieved a 100% monotonic consistency rate across the suite.
+
 ---
 
 ## 🎙️ Presentation Talk Track & Demo Script
@@ -58,19 +72,21 @@ Follow this script to demonstrate the live functionality:
 2.  Point out the **"API Active"** indicator in the top-right, showing the FastAPI server is online.
 3.  Point out the **"KB: 87 SQuAD | 50 TQA"** database badge, demonstrating that SQuAD and TruthfulQA data are indexed in the vector database.
 
-### Step 2: Run a SQuAD Grounded Test
+### Step 2: Run a SQuAD Factual Test (Claim Grounding Audit)
 1.  Click the **SQuAD Sample** preset button. This populates a factual question about the European Space Agency.
 2.  Click **Evaluate Response**.
-3.  *Explain*: "Our interface shows animated status indicators as the orchestrator triggers the Relevance, Accuracy, Groundedness, and Completeness agents in sequence."
-4.  Once the results load, show:
-    *   The **Overall Score** (4.5/5) and **Verdict** (Excellent).
-    *   The individual **Dimensional Scores** with progress bars and reasonings.
-    *   The **Retrieved Grounding Context** section at the bottom, which displays similar contexts retrieved from the SQLite vector DB.
+3.  *Explain*: "As the agents execute, the system audits each statement. Once finished, you will see a detailed breakdown in the **Accuracy** card: the sentences are analyzed, showing that the headquarters location fact was successfully verified against the reference text."
+4.  Expand the scorecard details to show:
+    *   **Matched Facts** list containing the verified claims (with green checkmarks).
+    *   **Overall Score** (4.5/5) and **Verdict** (Excellent).
 
-### Step 3: Run a TruthfulQA Hallucination Test
+### Step 3: Run a TruthfulQA Hallucination Test (Unsupported Claims Audit)
 1.  Click **Clear**, then click **TruthfulQA Sample**.
 2.  *Explain*: "This sample asks if touching a toad's warts causes warts. The AI response claims it is highly contagious. We leave the 'Source Document' field blank to force the RAG engine to query our pre-seeded reference knowledge base."
 3.  Click **Evaluate Response**.
 4.  Once it returns:
-    *   Show how the **Hallucination Judge** catches the discrepancy.
-    *   Show how the **RAG Grounding Context** section shows the retrieved statements from TruthfulQA (explaining that human warts are caused by HPV, not toads).
+    *   Point out the **Groundedness** card.
+    *   Show how the **Hallucination Judge** isolated the assertion about contagious warts and acid secretions, marking it with a red `[Hallucinated]` badge.
+    *   Show the explanation showing why it was flagged as unsupported.
+    *   Show the **RAG Grounding Context** showing that HPV is the true cause of warts.
+
